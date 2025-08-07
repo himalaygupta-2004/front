@@ -60,3 +60,4 @@ function DirectoryForm({ onScan, isLoading, scanType, setScanType }) {
 }
 
 export default DirectoryForm;
+

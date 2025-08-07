@@ -594,6 +594,7 @@
 
 // export default App;
 // src/App.jsx
+// Main
 
 import React, { useState, useCallback } from "react";
 import axios from "axios";
@@ -630,11 +631,12 @@ function App() {
           "http://localhost:8080/api/scan",
           payload
         );
-
+        const duplicatesCount = response.data?.duplicates?.length || 0;
+        const emptyFoldersCount = response.data?.emptyFolders?.length || 0;
         // Directly process the data. The backend is now guaranteed to provide all keys.
         setScanData(response.data);
         toast.success(
-          `Scan complete. Found ${response.data.duplicates.length} group(s) and ${response.data.emptyFolders.length} empty folder(s).`
+          `Scan complete. Found ${duplicatesCount} group(s) and ${emptyFoldersCount} empty folder(s).`
         );
       } catch (err) {
         // This catch block is for API failures (non-200 status codes)
