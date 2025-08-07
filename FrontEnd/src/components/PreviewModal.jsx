@@ -1,3 +1,5 @@
+// src/components/PreviewModal.jsx
+
 import React from "react";
 
 function PreviewModal({ content, onClose }) {

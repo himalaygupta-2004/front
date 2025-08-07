@@ -595,6 +595,196 @@
 // export default App;
 // src/App.jsx
 // Main
+// -----------------------------------------------------------------------------------------------
+// import React, { useState, useCallback } from "react";
+// import axios from "axios";
+// import { ToastContainer, toast } from "react-toastify";
+// import Spinner from "./components/Spinner";
+// import PreviewModal from "./components/PreviewModal";
+// import DirectoryForm from "./components/DirectoryForm";
+// import DuplicatesTable from "./components/DuplicatesSection";
+// import EmptyFoldersSection from "./components/EmptyFoldersSection";
+
+// function App() {
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [scanData, setScanData] = useState({
+//     duplicates: [],
+//     categorizedApps: {},
+//     emptyFolders: [],
+//   });
+//   const [selectedFiles, setSelectedFiles] = useState({});
+//   const [scanType, setScanType] = useState("EXACT");
+//   const [previewContent, setPreviewContent] = useState(null);
+//   const [basePath, setBasePath] = useState("");
+
+//   const handleScan = useCallback(
+//     async (path) => {
+//       setIsLoading(true);
+//       setBasePath(path);
+//       setSelectedFiles({});
+//       try {
+//         const payload = { path, scanType };
+//         if (scanType === "FUZZY") {
+//           payload.threshold = 50;
+//         }
+//         const response = await axios.post(
+//           "http://localhost:8080/api/scan",
+//           payload
+//         );
+//         const duplicatesCount = response.data?.duplicates?.length || 0;
+//         const emptyFoldersCount = response.data?.emptyFolders?.length || 0;
+//         // Directly process the data. The backend is now guaranteed to provide all keys.
+//         setScanData(response.data);
+//         toast.success(
+//           `Scan complete. Found ${duplicatesCount} group(s) and ${emptyFoldersCount} empty folder(s).`
+//         );
+//       } catch (err) {
+//         // This catch block is for API failures (non-200 status codes)
+//         const errorMessage =
+//           err.response?.data?.message ||
+//           "An unexpected error occurred during API communication.";
+//         toast.error(errorMessage);
+//         console.error("API Error:", err);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     },
+//     [scanType]
+//   );
+
+//   const handlePreview = useCallback(async (filePath) => {
+//     try {
+//       const response = await axios.get("http://localhost:8080/api/preview", {
+//         params: { filePath },
+//       });
+//       setPreviewContent(response.data);
+//     } catch (err) {
+//       toast.error(`Error: Could not load file preview: ${err.message}`);
+//     }
+//   }, []);
+
+//   const handleFileSelect = useCallback((filePath, isSelected) => {
+//     setSelectedFiles((prev) => {
+//       const newSelected = { ...prev };
+//       if (isSelected) {
+//         newSelected[filePath] = true;
+//       } else {
+//         delete newSelected[filePath];
+//       }
+//       return newSelected;
+//     });
+//   }, []);
+
+//   const handleBulkDelete = useCallback(async () => {
+//     const filesToDelete = Object.keys(selectedFiles);
+//     if (filesToDelete.length === 0) return;
+
+//     if (
+//       !window.confirm(
+//         `Are you sure you want to delete ${filesToDelete.length} file(s)? This action cannot be undone.`
+//       )
+//     ) {
+//       return;
+//     }
+
+//     setIsLoading(true);
+//     try {
+//       const payload = {
+//         basePath: basePath,
+//         filesToDelete: filesToDelete,
+//       };
+
+//       await axios.post("http://localhost:8080/api/delete-files", payload);
+
+//       toast.success(`Successfully deleted ${filesToDelete.length} files.`);
+
+//       await handleScan(basePath);
+//       setSelectedFiles({});
+//     } catch (err) {
+//       const errorMessage =
+//         err.response?.data?.message || "Failed to delete files.";
+//       toast.error(errorMessage);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   }, [selectedFiles, basePath, handleScan]);
+
+//   const handleDeleteIndividual = useCallback(
+//     async (filePath) => {
+//       if (
+//         !window.confirm(
+//           `Are you sure you want to delete this file? This action cannot be undone.`
+//         )
+//       ) {
+//         return;
+//       }
+//       setIsLoading(true);
+//       try {
+//         const payload = {
+//           basePath: basePath,
+//           filesToDelete: [filePath],
+//         };
+
+//         await axios.post("http://localhost:8080/api/delete-files", payload);
+
+//         toast.success(`Successfully deleted file: ${filePath}`);
+//         await handleScan(basePath);
+//       } catch (err) {
+//         const errorMessage =
+//           err.response?.data?.message || "Failed to delete file.";
+//         toast.error(errorMessage);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     },
+//     [basePath, handleScan]
+//   );
+
+//   return (
+//     <div className='bg-gray-100 min-h-screen font-sans'>
+//       <ToastContainer position='bottom-right' />
+//       <PreviewModal
+//         content={previewContent}
+//         onClose={() => setPreviewContent(null)}
+//       />
+//       <header className='bg-gray-800 text-white p-4 shadow-lg'>
+//         <h1 className='text-3xl font-bold text-center'>
+//           Intelligent Application Manager
+//         </h1>
+//       </header>
+//       <main className='container mx-auto p-4 sm:p-8'>
+//         <DirectoryForm
+//           onScan={handleScan}
+//           isLoading={isLoading}
+//           scanType={scanType}
+//           setScanType={setScanType}
+//         />
+//         {isLoading && <Spinner />}
+//         {!isLoading &&
+//           (scanData.duplicates.length > 0 ||
+//             Object.keys(scanData.categorizedApps).length > 0 ||
+//             scanData.emptyFolders.length > 0) && (
+//             <div className='grid grid-cols-1 gap-8'>
+//               <DuplicatesTable
+//                 duplicates={scanData.duplicates}
+//                 onFileSelect={handleFileSelect}
+//                 selectedFiles={selectedFiles}
+//                 onBulkDelete={handleBulkDelete}
+//                 onDeleteIndividual={handleDeleteIndividual}
+//                 onPreview={handlePreview}
+//                 isLoading={isLoading}
+//               />
+//               <EmptyFoldersSection folders={scanData.emptyFolders} />
+//             </div>
+//           )}
+//       </main>
+//     </div>
+//   );
+// }
+
+// export default App;
+
+// ------------------------------------
 
 import React, { useState, useCallback } from "react";
 import axios from "axios";
@@ -603,7 +793,9 @@ import Spinner from "./components/Spinner";
 import PreviewModal from "./components/PreviewModal";
 import DirectoryForm from "./components/DirectoryForm";
 import DuplicatesTable from "./components/DuplicatesSection";
+import CategorizedAppsTable from "./components/CategorizedAppsTable";
 import EmptyFoldersSection from "./components/EmptyFoldersSection";
+import RuleManager from "./components/RuleManager"; // Import the new component
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -616,6 +808,7 @@ function App() {
   const [scanType, setScanType] = useState("EXACT");
   const [previewContent, setPreviewContent] = useState(null);
   const [basePath, setBasePath] = useState("");
+  const [showRuleManager, setShowRuleManager] = useState(false); // New state to control visibility
 
   const handleScan = useCallback(
     async (path) => {
@@ -631,20 +824,14 @@ function App() {
           "http://localhost:8080/api/scan",
           payload
         );
-        const duplicatesCount = response.data?.duplicates?.length || 0;
-        const emptyFoldersCount = response.data?.emptyFolders?.length || 0;
-        // Directly process the data. The backend is now guaranteed to provide all keys.
         setScanData(response.data);
         toast.success(
-          `Scan complete. Found ${duplicatesCount} group(s) and ${emptyFoldersCount} empty folder(s).`
+          `Scan complete. Found ${response.data.duplicates.length} group(s) and ${response.data.emptyFolders.length} empty folder(s).`
         );
       } catch (err) {
-        // This catch block is for API failures (non-200 status codes)
         const errorMessage =
-          err.response?.data?.message ||
-          "An unexpected error occurred during API communication.";
+          err.response?.data?.message || "An unexpected error occurred.";
         toast.error(errorMessage);
-        console.error("API Error:", err);
       } finally {
         setIsLoading(false);
       }
@@ -751,6 +938,14 @@ function App() {
         <h1 className='text-3xl font-bold text-center'>
           Intelligent Application Manager
         </h1>
+        <div className='flex justify-center mt-2'>
+          <button
+            onClick={() => setShowRuleManager(!showRuleManager)}
+            className='bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600 transition-colors'
+          >
+            {showRuleManager ? "Hide Rules" : "Manage Rules"}
+          </button>
+        </div>
       </header>
       <main className='container mx-auto p-4 sm:p-8'>
         <DirectoryForm
@@ -759,24 +954,33 @@ function App() {
           scanType={scanType}
           setScanType={setScanType}
         />
-        {isLoading && <Spinner />}
-        {!isLoading &&
-          (scanData.duplicates.length > 0 ||
-            Object.keys(scanData.categorizedApps).length > 0 ||
-            scanData.emptyFolders.length > 0) && (
-            <div className='grid grid-cols-1 gap-8'>
-              <DuplicatesTable
-                duplicates={scanData.duplicates}
-                onFileSelect={handleFileSelect}
-                selectedFiles={selectedFiles}
-                onBulkDelete={handleBulkDelete}
-                onDeleteIndividual={handleDeleteIndividual}
-                onPreview={handlePreview}
-                isLoading={isLoading}
-              />
-              <EmptyFoldersSection folders={scanData.emptyFolders} />
-            </div>
-          )}
+        {showRuleManager ? (
+          <RuleManager />
+        ) : (
+          <>
+            {isLoading && <Spinner />}
+            {!isLoading &&
+              (scanData.duplicates.length > 0 ||
+                Object.keys(scanData.categorizedApps).length > 0 ||
+                scanData.emptyFolders.length > 0) && (
+                <div className='grid grid-cols-1 gap-8'>
+                  <DuplicatesTable
+                    duplicates={scanData.duplicates}
+                    onFileSelect={handleFileSelect}
+                    selectedFiles={selectedFiles}
+                    onBulkDelete={handleBulkDelete}
+                    onDeleteIndividual={handleDeleteIndividual}
+                    onPreview={handlePreview}
+                    isLoading={isLoading}
+                  />
+                  <CategorizedAppsTable
+                    categorizedApps={scanData.categorizedApps}
+                  />
+                  <EmptyFoldersSection folders={scanData.emptyFolders} />
+                </div>
+              )}
+          </>
+        )}
       </main>
     </div>
   );
